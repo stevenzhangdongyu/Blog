@@ -1,17 +1,17 @@
 package main
 
 import (
+	"github.com/gin-gonic/gin"
 	"net/http"
 	"personal-blog/server/internal/article"
-	"github.com/gin-gonic/gin"
 )
 
 func main() {
-    db, err := article.GetDBConnection()
-    if err != nil {
-        panic(err)
-    }
-    defer db.Close()
+	db, err := article.GetDBConnection()
+	if err != nil {
+		panic(err)
+	}
+	defer db.Close()
 	router := gin.Default()
 
 	router.GET("/api/health", func(c *gin.Context) {
@@ -30,21 +30,19 @@ func main() {
 
 	router.GET("/api/articles/:slug", func(c *gin.Context) {
 		slug := c.Param("slug")
-		article, err := article.GetArticleBySlug(db, slug)
+		foundArticle, err := article.GetArticleBySlug(db, slug)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
-		if article == nil {
+		if foundArticle == nil {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Article not found"})
 			return
 		}
-		c.JSON(http.StatusOK, gin.H{"article": article})
+		c.JSON(http.StatusOK, foundArticle)
 	})
-
 
 	if err := router.Run(":8080"); err != nil {
 		panic(err)
 	}
 }
-

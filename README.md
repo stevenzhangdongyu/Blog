@@ -18,7 +18,10 @@
 │   ├── cmd/api/         # 程序入口
 │   └── internal/        # 未来的业务模块
 ├── docs/                # 需求和学习记录
-└── compose.yaml         # 本地 PostgreSQL
+├── db/init/             # PostgreSQL 首次初始化 SQL
+├── deploy/              # Caddy 生产配置
+├── compose.yaml         # 本地 PostgreSQL
+└── compose.prod.yaml    # 生产环境服务编排
 ```
 
 ## 准备环境
@@ -43,7 +46,9 @@ docker compose up -d db
 
 ```bash
 cd server
-go mod tidy
+set -a
+source ../.env
+set +a
 go run ./cmd/api
 ```
 
@@ -68,3 +73,10 @@ npm run dev
 
 更具体的边界见 [docs/ROADMAP.md](docs/ROADMAP.md)。
 
+## 生产部署
+
+生产环境使用 Caddy 提供 HTTPS，并将 `/api` 转发给 Go API。参见
+`.env.production.example`、`compose.prod.yaml` 和 `deploy/Caddyfile`。
+
+不要将 `.env.production` 提交到 Git。生产数据库首次创建时会自动执行
+`db/init/001_create_articles.sql`。

@@ -1,8 +1,11 @@
 .DS_Store
 .env
+.env.production
 node_modules/
 dist/
 coverage/
 *.log
 server/bin/
 
+server/api
+*.tsbuildinfo

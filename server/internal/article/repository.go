@@ -1,14 +1,20 @@
 package article
+
 import (
 	"database/sql"
 	"fmt"
+	"os"
 	// 隐式导入 pgx 的 stdlib 驱动以注册 PostgreSQL 数据库驱动
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
+
 func GetDBConnection() (*sql.DB, error) {
 	// 1. 数据库连接字符串 (DSN)
 	// 格式：postgres://用户名:密码@主机地址:端口/数据库名?sslmode=disable
-	dsn := "postgres://blog:blog_dev_password@localhost:5432/blog?sslmode=disable"
+	dsn := os.Getenv("DATABASE_URL")
+	if dsn == "" {
+		return nil, fmt.Errorf("DATABASE_URL is required")
+	}
 
 	// 2. 打开数据库连接（此时并未真正与数据库建立 TCP 连接）
 	db, err := sql.Open("pgx", dsn)
@@ -21,6 +27,9 @@ func GetDBConnection() (*sql.DB, error) {
 		db.Close() // 确保在出错时关闭数据库连接
 		return nil, fmt.Errorf("连接数据库失败: %w", err)
 	}
+
+	db.SetMaxOpenConns(10)
+	db.SetMaxIdleConns(5)
 
 	fmt.Println("成功连接到 PostgreSQL 数据库！")
 	return db, nil
@@ -58,11 +67,15 @@ func GetArticles(db *sql.DB) ([]Article, error) {
 }
 
 func GetArticleBySlug(db *sql.DB, slug string) (*Article, error) {
-	query := `SELECT id, title, slug, summary, status FROM articles WHERE slug = $1;`
+	query := `
+		SELECT id, title, slug, summary, content, status
+		FROM articles
+		WHERE slug = $1 AND status = 'published';
+	`
 	row := db.QueryRow(query, slug)
 
 	var a Article
-	if err := row.Scan(&a.ID, &a.Title, &a.Slug, &a.Summary, &a.Status); err != nil {
+	if err := row.Scan(&a.ID, &a.Title, &a.Slug, &a.Summary, &a.Content, &a.Status); err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil // 没有找到对应的文章
 		}
