@@ -32,10 +32,11 @@ body {
   z-index: 0;
   pointer-events: none;
   background-color: #fffaf5;
+  background-repeat: no-repeat;
   background-position: center;
   background-size: cover;
   opacity: 0;
-  transition: opacity 500ms ease;
+  transition: opacity 1200ms ease-in-out;
 }
 
 .page-background.is-ready {
@@ -145,12 +146,20 @@ section {
 
 .article-list a,
 .shell > a {
+  display: inline-block;
+  touch-action: manipulation;
   color: var(--ink);
   font-family: "Heiti SC", "STHeitiSC-Medium", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", ui-sans-serif, system-ui, sans-serif;
   font-size: 1.5rem;
   font-weight: 500;
   text-decoration-color: #e17aa4;
 }
+
+.article-list .article-link { display: block; padding: 4px 0; }
+.inline-loading { display: inline-flex; align-items: center; gap: 10px; }
+
+.article-list li { cursor: pointer; }
+.article-list li:active { background: rgba(255, 253, 249, .7); }
 
 .article-list p {
   margin: 8px 0 0;

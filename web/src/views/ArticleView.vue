@@ -90,7 +90,7 @@ watch(() => route.params.slug, (slug) => fetchArticle(String(slug)))
   <main class="shell">
     <RouterLink to="/">返回文章列表</RouterLink>
 
-    <p v-if="!article && !errorMessage" class="intro">正在加载文章...</p>
+    <p v-if="!article && !errorMessage" class="intro inline-loading"><span class="loader-ring" aria-hidden="true"></span>正在加载文章...</p>
     <p v-else-if="errorMessage" class="intro">{{ errorMessage }}</p>
 
     <article v-else-if="article">

@@ -59,7 +59,7 @@ onMounted(() => {
       <p id="articles-title" class="label">ARTICLES</p>
       <ul class="article-list">
         <li v-for="article in articles" :key="article.id">
-          <RouterLink :to="`/articles/${article.slug}`">{{ article.title }}</RouterLink>
+          <RouterLink class="article-link" :to="`/articles/${article.slug}`">{{ article.title }}</RouterLink>
           <p>{{ article.summary }}</p>
         </li>
       </ul>
