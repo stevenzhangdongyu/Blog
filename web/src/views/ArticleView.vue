@@ -75,6 +75,7 @@ async function submitComment() {
     comments.value.push(result)
     commentAuthor.value = ''
     commentContent.value = ''
+    window.dispatchEvent(new Event('comment-celebration'))
   } catch {
     commentError.value = '暂时无法发表评论，请稍后再试。'
   } finally {

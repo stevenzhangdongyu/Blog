@@ -78,17 +78,49 @@ function burst(event: PointerEvent) {
   if (!frame) frame = requestAnimationFrame(animate)
 }
 
+function launchCelebrationWave(amount: number) {
+  for (let count = 0; count < amount; count += 1) {
+    const edgeBias = Math.random()
+    const x = edgeBias < 0.3
+      ? Math.random() * window.innerWidth * 0.25
+      : edgeBias > 0.7
+        ? window.innerWidth * 0.75 + Math.random() * window.innerWidth * 0.25
+        : Math.random() * window.innerWidth
+    particles.push({
+      x,
+      y: window.innerHeight + Math.random() * 24,
+      width: 5 + Math.random() * 10,
+      height: 3 + Math.random() * 7,
+      opacity: 1,
+      velocityX: (window.innerWidth / 2 - x) * 0.003 + (Math.random() - 0.5) * 5,
+      velocityY: -(8 + Math.random() * 11),
+      rotation: Math.random() * Math.PI,
+      rotationVelocity: (Math.random() - 0.5) * 0.55,
+      color: colors[Math.floor(Math.random() * colors.length)],
+    })
+  }
+  if (!frame) frame = requestAnimationFrame(animate)
+}
+
+function celebrate() {
+  if (reduceMotion) return
+  launchCelebrationWave(150)
+  window.setTimeout(() => launchCelebrationWave(100), 180)
+}
+
 onMounted(() => {
   reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
   resize()
   window.addEventListener('resize', resize)
   window.addEventListener('pointerdown', burst)
+  window.addEventListener('comment-celebration', celebrate)
 })
 
 onBeforeUnmount(() => {
   cancelAnimationFrame(frame)
   window.removeEventListener('resize', resize)
   window.removeEventListener('pointerdown', burst)
+  window.removeEventListener('comment-celebration', celebrate)
 })
 </script>
 
