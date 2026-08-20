@@ -5,10 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="A personal blog built while learning full-stack development." />
     <title>Personal Blog Lab</title>
+    <style>
+      #boot-loader { position: fixed; inset: 0; z-index: 999; display: grid; place-content: center; gap: 12px; background: #fffaf5; color: #667080; font: 14px -apple-system, BlinkMacSystemFont, "Heiti SC", sans-serif; text-align: center; }
+      .boot-loader-ring { width: 26px; height: 26px; margin: 0 auto; border: 3px solid #ddd0f5; border-top-color: #f9c7d2; border-radius: 50%; animation: boot-spin .8s linear infinite; }
+      @keyframes boot-spin { to { transform: rotate(360deg); } }
+    </style>
   </head>
   <body>
+    <div id="boot-loader" role="status" aria-live="polite">
+      <span class="boot-loader-ring" aria-hidden="true"></span>
+      <span>页面加载中</span>
+    </div>
     <div id="app"></div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>
-

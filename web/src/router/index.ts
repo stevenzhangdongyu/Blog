@@ -1,27 +1,23 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import ArticleView from '../views/ArticleView.vue'
-import HomeView from '../views/HomeView.vue'
-import AdminLoginView from '../views/AdminLoginView.vue'
-import AdminArticlesView from '../views/AdminArticlesView.vue'
 
 const router = createRouter({
   history: createWebHistory(),
   routes: [
     {
       path: '/',
-      component: HomeView,
+      component: () => import('../views/HomeView.vue'),
     },
     {
       path: '/articles/:slug',
-      component: ArticleView,
+      component: () => import('../views/ArticleView.vue'),
     },
     {
       path: '/admin/login',
-      component: AdminLoginView,
+      component: () => import('../views/AdminLoginView.vue'),
     },
     {
       path: '/admin/articles',
-      component: AdminArticlesView,
+      component: () => import('../views/AdminArticlesView.vue'),
       meta: { requiresAdmin: true },
     },
   ],

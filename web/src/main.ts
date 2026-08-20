@@ -6,3 +6,5 @@ import './style.css'
 createApp(App)
   .use(router)
   .mount('#app')
+
+document.getElementById('boot-loader')?.remove()
