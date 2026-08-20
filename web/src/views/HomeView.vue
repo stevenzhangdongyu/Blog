@@ -44,6 +44,12 @@ async function fetchArticles() {
 onMounted(() => {
   fetchHealth()
   fetchArticles()
+  const preloadArticleView = () => void import('./ArticleView.vue')
+  if ('requestIdleCallback' in window) {
+    window.requestIdleCallback(preloadArticleView, { timeout: 3000 })
+  } else {
+    globalThis.setTimeout(preloadArticleView, 1000)
+  }
 })
 </script>
 
@@ -59,8 +65,10 @@ onMounted(() => {
       <p id="articles-title" class="label">ARTICLES</p>
       <ul class="article-list">
         <li v-for="article in articles" :key="article.id">
-          <RouterLink class="article-link" :to="`/articles/${article.slug}`">{{ article.title }}</RouterLink>
-          <p>{{ article.summary }}</p>
+          <RouterLink class="article-link" :to="`/articles/${article.slug}`">
+            <span class="article-title">{{ article.title }}</span>
+            <span class="article-summary">{{ article.summary }}</span>
+          </RouterLink>
         </li>
       </ul>
     </section>

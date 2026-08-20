@@ -24,9 +24,13 @@ const router = createRouter({
 })
 
 router.beforeEach(async (to) => {
+  document.documentElement.classList.add('is-navigating')
   if (!to.meta.requiresAdmin) return true
   const response = await fetch('/api/admin/session', { credentials: 'include' })
   return response.ok ? true : '/admin/login'
 })
+
+router.afterEach(() => document.documentElement.classList.remove('is-navigating'))
+router.onError(() => document.documentElement.classList.remove('is-navigating'))
 
 export default router
