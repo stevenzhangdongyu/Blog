@@ -31,9 +31,7 @@ body {
   inset: 0;
   z-index: 0;
   pointer-events: none;
-  background-image:
-    linear-gradient(rgba(255, 250, 245, 0.78), rgba(255, 250, 245, 0.88)),
-    url('/blog-background.jpg');
+  background-color: #fffaf5;
   background-position: center;
   background-size: cover;
   opacity: 0;
@@ -43,6 +41,33 @@ body {
 .page-background.is-ready {
   opacity: 1;
 }
+
+.background-loader {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 13px;
+  border: 1px solid rgba(255, 255, 255, .75);
+  background: rgba(255, 253, 249, .88);
+  color: var(--muted);
+  font-size: .8rem;
+  box-shadow: 0 6px 20px rgba(41, 49, 61, .08);
+}
+
+.loader-ring {
+  width: 15px;
+  height: 15px;
+  border: 2px solid var(--lilac);
+  border-top-color: var(--rose);
+  border-radius: 50%;
+  animation: background-spin .8s linear infinite;
+}
+
+@keyframes background-spin { to { transform: rotate(360deg); } }
 
 .shell {
   position: relative;
