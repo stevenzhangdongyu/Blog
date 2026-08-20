@@ -1,1 +1,1 @@
-{"root":["./src/main.ts","./src/router/index.ts","./src/utils/markdown.ts","./src/app.vue","./src/views/articleview.vue","./src/views/homeview.vue"],"version":"5.7.3"}
+{"root":["./src/main.ts","./src/router/index.ts","./src/utils/markdown.ts","./src/app.vue","./src/components/confettieffect.vue","./src/views/adminarticlesview.vue","./src/views/adminloginview.vue","./src/views/articleview.vue","./src/views/homeview.vue"],"version":"5.7.3"}

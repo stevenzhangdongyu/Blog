@@ -50,7 +50,7 @@ onMounted(() => {
 <template>
   <main class="shell">
     <p class="eyebrow">PERSONAL BLOG LAB</p>
-    <h1>写出我心</h1>
+    <h1 class="home-title">写出我心</h1>
     <p class="intro">
       只有一种成功，那就是按照自己的意愿过完一生。<br />
     </p>
