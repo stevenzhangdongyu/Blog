@@ -193,6 +193,10 @@ section {
 }
 
 .comments { margin-top: 56px; padding-top: 24px; border-top: 2px solid var(--lilac); }
+.quote-menu { position: fixed; z-index: 20; padding: 8px 12px; border: 1px solid var(--lilac); background: var(--lemon); box-shadow: 0 5px 18px rgba(41, 49, 61, .14); }
+.comment-quote { display: block; margin: 10px 0; padding: 8px 12px; border-left: 3px solid var(--lilac); background: rgba(221, 208, 245, .25); color: var(--muted); text-align: left; }
+.comment-quote:hover { background: rgba(221, 208, 245, .5); }
+.quote-highlight-active { scroll-margin-top: 20vh; }
 .comment-list { display: grid; gap: 12px; }
 .comment-item { padding: 16px; border-left: 4px solid var(--peach); background: rgba(255, 253, 249, .9); }
 .comment-item:nth-child(2n) { border-left-color: var(--mint); }

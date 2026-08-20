@@ -128,6 +128,9 @@ func ensureComments(db *sql.DB) error {
 	if err != nil {
 		return err
 	}
+	if _, err = db.Exec(`ALTER TABLE comments ADD COLUMN IF NOT EXISTS quoted_text VARCHAR(300) NOT NULL DEFAULT ''`); err != nil {
+		return err
+	}
 	_, err = db.Exec(`CREATE INDEX IF NOT EXISTS comments_article_id_created_at_idx
 		ON comments (article_id, created_at ASC)`)
 	return err
@@ -160,6 +163,7 @@ type articleInput struct {
 type commentInput struct {
 	AuthorName string `json:"authorName" binding:"required"`
 	Content    string `json:"content" binding:"required"`
+	QuotedText string `json:"quotedText"`
 	Website    string `json:"website"`
 }
 
@@ -167,6 +171,7 @@ type comment struct {
 	ID         int       `json:"id"`
 	AuthorName string    `json:"authorName"`
 	Content    string    `json:"content"`
+	QuotedText string    `json:"quotedText"`
 	CreatedAt  time.Time `json:"createdAt"`
 }
 
@@ -401,7 +406,7 @@ func deleteArticle(db *sql.DB) gin.HandlerFunc {
 func getComments(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		rows, err := db.Query(`
-			SELECT c.id, c.author_name, c.content, c.created_at
+			SELECT c.id, c.author_name, c.content, c.quoted_text, c.created_at
 			FROM comments c
 			JOIN articles a ON a.id = c.article_id
 			WHERE a.slug = $1 AND a.status = 'published'
@@ -415,7 +420,7 @@ func getComments(db *sql.DB) gin.HandlerFunc {
 		comments := []comment{}
 		for rows.Next() {
 			var item comment
-			if err := rows.Scan(&item.ID, &item.AuthorName, &item.Content, &item.CreatedAt); err != nil {
+			if err := rows.Scan(&item.ID, &item.AuthorName, &item.Content, &item.QuotedText, &item.CreatedAt); err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": "读取评论失败"})
 				return
 			}
@@ -446,17 +451,22 @@ func createComment(db *sql.DB, limiter *commentRateLimiter) gin.HandlerFunc {
 		}
 		input.AuthorName = strings.TrimSpace(input.AuthorName)
 		input.Content = strings.TrimSpace(input.Content)
+		input.QuotedText = strings.TrimSpace(input.QuotedText)
 		if input.AuthorName == "" || input.Content == "" || len([]rune(input.AuthorName)) > 50 || len([]rune(input.Content)) > 1000 {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "昵称限 50 字，评论限 1000 字，且不能为空"})
+			return
+		}
+		if len([]rune(input.QuotedText)) > 300 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "引用内容不能超过 300 字"})
 			return
 		}
 
 		var created comment
 		err := db.QueryRow(`
-			INSERT INTO comments (article_id, author_name, content)
-			SELECT id, $2, $3 FROM articles WHERE slug = $1 AND status = 'published'
-			RETURNING id, author_name, content, created_at`, c.Param("slug"), input.AuthorName, input.Content).
-			Scan(&created.ID, &created.AuthorName, &created.Content, &created.CreatedAt)
+			INSERT INTO comments (article_id, author_name, content, quoted_text)
+			SELECT id, $2, $3, $4 FROM articles WHERE slug = $1 AND status = 'published'
+			RETURNING id, author_name, content, quoted_text, created_at`, c.Param("slug"), input.AuthorName, input.Content, input.QuotedText).
+			Scan(&created.ID, &created.AuthorName, &created.Content, &created.QuotedText, &created.CreatedAt)
 		if err == sql.ErrNoRows {
 			c.JSON(http.StatusNotFound, gin.H{"error": "文章不存在或尚未发布"})
 			return

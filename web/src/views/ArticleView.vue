@@ -15,6 +15,7 @@ interface Comment {
   id: number
   authorName: string
   content: string
+  quotedText: string
   createdAt: string
 }
 const htmlContent = computed(() => renderMarkdown(article.value?.content || ''))
@@ -27,6 +28,38 @@ const commentAuthor = ref('')
 const commentContent = ref('')
 const commentError = ref('')
 const commentSubmitting = ref(false)
+const articleBody = ref<HTMLElement | null>(null)
+const quoteMenu = ref({ visible: false, x: 0, y: 0, text: '' })
+const highlightedQuote = ref('')
+
+function captureSelection() {
+  const selection = window.getSelection()
+  const text = selection?.toString().trim() || ''
+  if (!selection || !text || !articleBody.value || !articleBody.value.contains(selection.anchorNode)) {
+    quoteMenu.value.visible = false
+    return
+  }
+  const rect = selection.getRangeAt(0).getBoundingClientRect()
+  quoteMenu.value = { visible: true, x: Math.max(12, rect.left + rect.width / 2 - 52), y: Math.max(12, rect.top - 44), text: text.slice(0, 300) }
+}
+
+function useSelectedQuote() {
+  commentContent.value = commentContent.value || `关于“${quoteMenu.value.text}”：`
+  quoteMenu.value.visible = false
+  document.querySelector('.comment-form')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  window.setTimeout(() => document.querySelector<HTMLTextAreaElement>('.comment-form textarea')?.focus(), 350)
+}
+
+function jumpToQuote(text: string) {
+  if (!text || !articleBody.value) return
+  if (!articleBody.value.textContent?.includes(text)) {
+    commentError.value = '原文已发生变化，暂时找不到这段引用。'
+    return
+  }
+  highlightedQuote.value = text
+  articleBody.value.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  window.setTimeout(() => { highlightedQuote.value = '' }, 2200)
+}
 
 async function fetchArticle(slug: string) {
   article.value = null
@@ -65,7 +98,7 @@ async function submitComment() {
     const response = await fetch(`/api/articles/${encodeURIComponent(String(route.params.slug))}/comments`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ authorName: commentAuthor.value, content: commentContent.value, website: '' }),
+      body: JSON.stringify({ authorName: commentAuthor.value, content: commentContent.value, quotedText: quoteMenu.value.text, website: '' }),
     })
     const result = await response.json().catch(() => ({}))
     if (!response.ok) {
@@ -75,6 +108,7 @@ async function submitComment() {
     comments.value.push(result)
     commentAuthor.value = ''
     commentContent.value = ''
+    quoteMenu.value.text = ''
     window.dispatchEvent(new Event('comment-celebration'))
   } catch {
     commentError.value = '暂时无法发表评论，请稍后再试。'
@@ -96,12 +130,14 @@ watch(() => route.params.slug, (slug) => fetchArticle(String(slug)))
 
     <article v-else-if="article">
       <p class="eyebrow">ARTICLE</p>
-      <div class="markdown-body" v-html="htmlContent"></div>
+      <div ref="articleBody" class="markdown-body" :class="{ 'quote-highlight-active': highlightedQuote }" @mouseup="captureSelection" @touchend="captureSelection" v-html="htmlContent"></div>
+      <button v-if="quoteMenu.visible" class="quote-menu" :style="{ left: `${quoteMenu.x}px`, top: `${quoteMenu.y}px` }" type="button" @click="useSelectedQuote">引用评论</button>
       <section class="comments" aria-labelledby="comments-title">
         <p id="comments-title" class="label">COMMENTS</p>
         <div v-if="comments.length" class="comment-list">
           <article v-for="comment in comments" :key="comment.id" class="comment-item">
             <div class="comment-meta"><strong>{{ comment.authorName }}</strong><time>{{ new Date(comment.createdAt).toLocaleString('zh-CN') }}</time></div>
+            <button v-if="comment.quotedText" class="comment-quote" type="button" @click="jumpToQuote(comment.quotedText)">“{{ comment.quotedText }}”</button>
             <p>{{ comment.content }}</p>
           </article>
         </div>
