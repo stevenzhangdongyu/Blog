@@ -136,6 +136,21 @@ func ensureComments(db *sql.DB) error {
 	return err
 }
 
+const defaultHomeIntro = "只有一种成功，那就是按照自己的意愿过完一生。"
+
+func ensureSiteSettings(db *sql.DB) error {
+	if _, err := db.Exec(`CREATE TABLE IF NOT EXISTS site_settings (
+		key VARCHAR(100) PRIMARY KEY,
+		value TEXT NOT NULL,
+		updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+	)`); err != nil {
+		return err
+	}
+	_, err := db.Exec(`INSERT INTO site_settings (key, value) VALUES ('home_intro', $1)
+		ON CONFLICT (key) DO NOTHING`, defaultHomeIntro)
+	return err
+}
+
 func requireAdmin(store *sessionStore) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		cookie, err := c.Cookie("admin_session")
@@ -241,6 +256,9 @@ func main() {
 	if err := ensureComments(db); err != nil {
 		panic(err)
 	}
+	if err := ensureSiteSettings(db); err != nil {
+		panic(err)
+	}
 
 	store := newSessionStore()
 	commentLimiter := newCommentRateLimiter()
@@ -249,6 +267,14 @@ func main() {
 
 	router.GET("/api/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
+	})
+	router.GET("/api/site-settings", func(c *gin.Context) {
+		var homeIntro string
+		if err := db.QueryRow(`SELECT value FROM site_settings WHERE key = 'home_intro'`).Scan(&homeIntro); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "读取首页设置失败"})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"homeIntro": homeIntro})
 	})
 	router.GET("/api/articles", func(c *gin.Context) {
 		articles, err := article.GetArticles(db)
@@ -316,6 +342,28 @@ func main() {
 			return
 		}
 		c.JSON(http.StatusOK, gin.H{"username": username})
+	})
+	admin.PUT("/settings", requireAdmin(store), func(c *gin.Context) {
+		var input struct {
+			HomeIntro string `json:"homeIntro" binding:"required"`
+		}
+		if err := c.ShouldBindJSON(&input); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "首页文案不能为空"})
+			return
+		}
+		input.HomeIntro = strings.TrimSpace(input.HomeIntro)
+		if input.HomeIntro == "" || len([]rune(input.HomeIntro)) > 500 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "首页文案需为 1 到 500 个字符"})
+			return
+		}
+		_, err := db.Exec(`INSERT INTO site_settings (key, value, updated_at)
+			VALUES ('home_intro', $1, CURRENT_TIMESTAMP)
+			ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = CURRENT_TIMESTAMP`, input.HomeIntro)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "保存首页设置失败"})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"homeIntro": input.HomeIntro})
 	})
 
 	protected := admin.Group("/articles", requireAdmin(store))

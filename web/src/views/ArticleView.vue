@@ -49,6 +49,10 @@ function useSelectedQuote() {
   window.setTimeout(() => document.querySelector<HTMLTextAreaElement>('.comment-form textarea')?.focus(), 350)
 }
 
+function clearSelectedQuote() {
+  quoteMenu.value.text = ''
+}
+
 function jumpToQuote(text: string) {
   if (!text || !articleBody.value) return
   if (!articleBody.value.textContent?.includes(text)) {
@@ -142,6 +146,13 @@ watch(() => route.params.slug, (slug) => fetchArticle(String(slug)))
         </div>
         <p v-else class="comment-empty">还没有评论，留下第一条吧。</p>
         <form class="comment-form" @submit.prevent="submitComment">
+          <div v-if="quoteMenu.text && !quoteMenu.visible" class="selected-quote">
+            <div class="selected-quote-header">
+              <span>正在引用</span>
+              <button type="button" aria-label="取消引用" title="取消引用" @click="clearSelectedQuote">&times;</button>
+            </div>
+            <blockquote>{{ quoteMenu.text }}</blockquote>
+          </div>
           <label>昵称 <input v-model="commentAuthor" maxlength="50" required placeholder="怎么称呼你？" /></label>
           <label>评论 <textarea v-model="commentContent" maxlength="1000" rows="4" required placeholder="写下你的想法" /></label>
           <input class="honeypot" tabindex="-1" autocomplete="off" aria-hidden="true" />

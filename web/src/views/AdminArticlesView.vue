@@ -16,6 +16,10 @@ const router = useRouter()
 const articles = ref<Article[]>([])
 const editing = ref<Article | null>(null)
 const errorMessage = ref('')
+const homeIntro = ref('')
+const settingsMessage = ref('')
+const settingsError = ref('')
+const settingsSaving = ref(false)
 const editor = ref<HTMLTextAreaElement | null>(null)
 const previewHtml = computed(() => renderMarkdown(editing.value?.content ?? ''))
 
@@ -24,6 +28,38 @@ async function loadArticles() {
   if (response.status === 401) return router.push('/admin/login')
   const result = await response.json()
   articles.value = result.articles
+}
+
+async function loadSettings() {
+  const response = await fetch('/api/site-settings')
+  if (!response.ok) return
+  const result: { homeIntro: string } = await response.json()
+  homeIntro.value = result.homeIntro
+}
+
+async function saveSettings() {
+  settingsMessage.value = ''
+  settingsError.value = ''
+  settingsSaving.value = true
+  try {
+    const response = await fetch('/api/admin/settings', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ homeIntro: homeIntro.value }),
+    })
+    const result = await response.json().catch(() => ({}))
+    if (!response.ok) {
+      settingsError.value = result.error || '首页文案保存失败'
+      return
+    }
+    homeIntro.value = result.homeIntro
+    settingsMessage.value = '首页文案已保存'
+  } catch {
+    settingsError.value = '首页文案保存失败，请稍后再试'
+  } finally {
+    settingsSaving.value = false
+  }
 }
 
 function newArticle() {
@@ -101,6 +137,7 @@ async function logout() {
 
 onMounted(() => {
   loadArticles()
+  loadSettings()
 })
 </script>
 
@@ -138,12 +175,26 @@ onMounted(() => {
       <button @click="save">保存</button>
       <button class="secondary" @click="editing = null">取消</button>
     </section>
-    <section v-else class="admin-list">
-      <article v-for="article in articles" :key="article.id" class="admin-row">
-        <div><h2>{{ article.title }}</h2><p>{{ article.slug }} · {{ article.status }}</p></div>
-        <div class="admin-actions"><button class="secondary" @click="editing = { ...article }">编辑</button><button class="danger" @click="remove(article.id)">删除</button></div>
-      </article>
-      <p v-if="articles.length === 0">还没有文章。</p>
-    </section>
+    <template v-else>
+      <section class="site-settings" aria-labelledby="site-settings-title">
+        <div class="site-settings-heading">
+          <div><p class="label">HOME PAGE</p><h2 id="site-settings-title">首页文案</h2></div>
+          <button :disabled="settingsSaving || !homeIntro.trim()" @click="saveSettings">{{ settingsSaving ? '保存中...' : '保存文案' }}</button>
+        </div>
+        <textarea v-model="homeIntro" maxlength="500" rows="3" aria-label="首页文案" placeholder="输入首页展示的文案" />
+        <div class="settings-feedback" aria-live="polite">
+          <p v-if="settingsError" class="form-error">{{ settingsError }}</p>
+          <p v-else-if="settingsMessage" class="form-success">{{ settingsMessage }}</p>
+          <span>{{ homeIntro.length }}/500</span>
+        </div>
+      </section>
+      <section class="admin-list">
+        <article v-for="article in articles" :key="article.id" class="admin-row">
+          <div><h2>{{ article.title }}</h2><p>{{ article.slug }} · {{ article.status }}</p></div>
+          <div class="admin-actions"><button class="secondary" @click="editing = { ...article }">编辑</button><button class="danger" @click="remove(article.id)">删除</button></div>
+        </article>
+        <p v-if="articles.length === 0">还没有文章。</p>
+      </section>
+    </template>
   </main>
 </template>
