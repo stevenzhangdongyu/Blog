@@ -44,7 +44,6 @@ function captureSelection() {
 }
 
 function useSelectedQuote() {
-  commentContent.value = commentContent.value || `关于“${quoteMenu.value.text}”：`
   quoteMenu.value.visible = false
   document.querySelector('.comment-form')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
   window.setTimeout(() => document.querySelector<HTMLTextAreaElement>('.comment-form textarea')?.focus(), 350)
