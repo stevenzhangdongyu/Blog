@@ -193,7 +193,56 @@ section {
 }
 
 .comments { margin-top: 56px; padding-top: 24px; border-top: 2px solid var(--lilac); }
-.quote-menu { position: fixed; z-index: 20; padding: 8px 12px; border: 1px solid var(--lilac); background: var(--lemon); box-shadow: 0 5px 18px rgba(41, 49, 61, .14); }
+.quote-menu {
+  position: fixed;
+  z-index: 20;
+  min-width: 104px;
+  padding: 9px 14px 9px 12px;
+  border: 1px solid rgba(142, 62, 112, .24);
+  border-radius: 999px;
+  color: #71335e;
+  background: rgba(255, 253, 249, .94);
+  box-shadow: 0 8px 22px rgba(41, 49, 61, .16), 0 2px 5px rgba(142, 62, 112, .08);
+  backdrop-filter: blur(8px);
+  font-size: .88rem;
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: transform 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
+}
+
+.quote-menu::before {
+  content: '“';
+  display: inline-block;
+  margin-right: 4px;
+  color: #c05c83;
+  font-family: Georgia, serif;
+  font-size: 1.2em;
+  line-height: 0;
+  transform: translateY(2px);
+}
+
+.quote-menu:hover {
+  background: var(--lemon);
+  box-shadow: 0 11px 26px rgba(41, 49, 61, .2), 0 3px 7px rgba(142, 62, 112, .1);
+  transform: translateY(-2px);
+}
+
+.quote-menu:active { transform: translateY(0); }
+
+.quote-menu:focus-visible {
+  outline: 3px solid rgba(191, 224, 243, .9);
+  outline-offset: 3px;
+}
+
+@media (max-width: 560px) {
+  .quote-menu {
+    min-height: 42px;
+    padding-top: 10px;
+    padding-bottom: 10px;
+  }
+}
 .comment-quote { display: block; margin: 10px 0; padding: 8px 12px; border-left: 3px solid var(--lilac); background: rgba(221, 208, 245, .25); color: var(--muted); text-align: left; }
 .comment-quote:hover { background: rgba(221, 208, 245, .5); }
 .quote-highlight-active { scroll-margin-top: 20vh; }
