@@ -11,6 +11,7 @@ interface Article {
   content: string
   status: string
 }
+interface Quote { id: number; content: string }
 
 const router = useRouter()
 const articles = ref<Article[]>([])
@@ -20,6 +21,9 @@ const homeIntro = ref('')
 const settingsMessage = ref('')
 const settingsError = ref('')
 const settingsSaving = ref(false)
+const quotes = ref<Quote[]>([])
+const newQuote = ref('')
+const quoteMessage = ref('')
 const editor = ref<HTMLTextAreaElement | null>(null)
 const previewHtml = computed(() => renderMarkdown(editing.value?.content ?? ''))
 
@@ -35,6 +39,33 @@ async function loadSettings() {
   if (!response.ok) return
   const result: { homeIntro: string } = await response.json()
   homeIntro.value = result.homeIntro
+}
+
+async function loadQuotes() {
+  const response = await fetch('/api/admin/quotes', { credentials: 'include' })
+  if (response.status === 401) return router.push('/admin/login')
+  if (!response.ok) return
+  quotes.value = (await response.json()).quotes
+}
+
+async function addQuote() {
+  const content = newQuote.value.trim()
+  if (!content) return
+  const response = await fetch('/api/admin/quotes', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ content }) })
+  if (response.ok) { newQuote.value = ''; quoteMessage.value = '名言已添加'; await loadQuotes() }
+}
+
+async function editQuote(quote: Quote) {
+  const content = window.prompt('修改名言内容', quote.content)?.trim()
+  if (!content || content === quote.content) return
+  const response = await fetch(`/api/admin/quotes/${quote.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ content }) })
+  if (response.ok) { quoteMessage.value = '名言已更新'; await loadQuotes() }
+}
+
+async function removeQuote(id: number) {
+  if (!window.confirm('确定删除这句名言吗？')) return
+  const response = await fetch(`/api/admin/quotes/${id}`, { method: 'DELETE', credentials: 'include' })
+  if (response.ok) { quoteMessage.value = '名言已删除'; await loadQuotes() }
 }
 
 async function saveSettings() {
@@ -138,6 +169,7 @@ async function logout() {
 onMounted(() => {
   loadArticles()
   loadSettings()
+  loadQuotes()
 })
 </script>
 
@@ -187,6 +219,12 @@ onMounted(() => {
           <p v-else-if="settingsMessage" class="form-success">{{ settingsMessage }}</p>
           <span>{{ homeIntro.length }}/500</span>
         </div>
+      </section>
+      <section class="site-settings" aria-labelledby="quotes-title">
+        <div class="site-settings-heading"><div><p class="label">ROTATING QUOTES</p><h2 id="quotes-title">首页名言</h2></div><span>{{ quotes.length }} 条</span></div>
+        <div class="quote-editor"><textarea v-model="newQuote" maxlength="500" rows="2" placeholder="添加一句首页名言" /><button :disabled="!newQuote.trim()" @click="addQuote">添加名言</button></div>
+        <ul class="quote-admin-list"><li v-for="quote in quotes" :key="quote.id"><span>{{ quote.content }}</span><span class="admin-actions"><button class="secondary" @click="editQuote(quote)">编辑</button><button class="danger" @click="removeQuote(quote.id)">删除</button></span></li></ul>
+        <p v-if="quoteMessage" class="form-success">{{ quoteMessage }}</p>
       </section>
       <section class="admin-list">
         <article v-for="article in articles" :key="article.id" class="admin-row">

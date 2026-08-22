@@ -151,6 +151,20 @@ func ensureSiteSettings(db *sql.DB) error {
 	return err
 }
 
+func ensureSiteQuotes(db *sql.DB) error {
+	if _, err := db.Exec(`CREATE TABLE IF NOT EXISTS site_quotes (
+		id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+		content VARCHAR(500) NOT NULL,
+		created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+		updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+		CONSTRAINT site_quotes_content_not_blank CHECK (length(trim(content)) > 0)
+	)`); err != nil {
+		return err
+	}
+	_, err := db.Exec(`INSERT INTO site_quotes (content) SELECT $1 WHERE NOT EXISTS (SELECT 1 FROM site_quotes)`, defaultHomeIntro)
+	return err
+}
+
 func requireAdmin(store *sessionStore) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		cookie, err := c.Cookie("admin_session")
@@ -259,6 +273,9 @@ func main() {
 	if err := ensureSiteSettings(db); err != nil {
 		panic(err)
 	}
+	if err := ensureSiteQuotes(db); err != nil {
+		panic(err)
+	}
 
 	store := newSessionStore()
 	commentLimiter := newCommentRateLimiter()
@@ -276,6 +293,7 @@ func main() {
 		}
 		c.JSON(http.StatusOK, gin.H{"homeIntro": homeIntro})
 	})
+	router.GET("/api/site-quotes", listQuotes(db))
 	router.GET("/api/articles", func(c *gin.Context) {
 		articles, err := article.GetArticles(db)
 		if err != nil {
@@ -388,9 +406,97 @@ func main() {
 	protected.POST("", saveArticle(db, false))
 	protected.PUT("/:id", saveArticle(db, true))
 	protected.DELETE("/:id", deleteArticle(db))
+	quotes := admin.Group("/quotes", requireAdmin(store))
+	quotes.GET("", listQuotes(db))
+	quotes.POST("", saveQuote(db, 0))
+	quotes.PUT("/:id", func(c *gin.Context) {
+		id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "名言 ID 无效"})
+			return
+		}
+		saveQuote(db, id)(c)
+	})
+	quotes.DELETE("/:id", func(c *gin.Context) {
+		id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "名言 ID 无效"})
+			return
+		}
+		result, err := db.Exec(`DELETE FROM site_quotes WHERE id = $1`, id)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "删除名言失败"})
+			return
+		}
+		n, _ := result.RowsAffected()
+		if n == 0 {
+			c.JSON(http.StatusNotFound, gin.H{"error": "名言不存在"})
+			return
+		}
+		c.Status(http.StatusNoContent)
+	})
 
 	if err := router.Run(":8080"); err != nil {
 		panic(err)
+	}
+}
+
+func listQuotes(db *sql.DB) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		rows, err := db.Query(`SELECT id, content FROM site_quotes ORDER BY id ASC`)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "读取名言失败"})
+			return
+		}
+		defer rows.Close()
+		quotes := []gin.H{}
+		for rows.Next() {
+			var id int64
+			var content string
+			if err := rows.Scan(&id, &content); err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "读取名言失败"})
+				return
+			}
+			quotes = append(quotes, gin.H{"id": id, "content": content})
+		}
+		c.JSON(http.StatusOK, gin.H{"quotes": quotes})
+	}
+}
+
+func saveQuote(db *sql.DB, id int64) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var input struct {
+			Content string `json:"content" binding:"required"`
+		}
+		if err := c.ShouldBindJSON(&input); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "名言内容不能为空"})
+			return
+		}
+		input.Content = strings.TrimSpace(input.Content)
+		if input.Content == "" || len([]rune(input.Content)) > 500 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "名言需为 1 到 500 个字符"})
+			return
+		}
+		if id == 0 {
+			var newID int64
+			if err := db.QueryRow(`INSERT INTO site_quotes (content) VALUES ($1) RETURNING id`, input.Content).Scan(&newID); err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "新增名言失败"})
+				return
+			}
+			c.JSON(http.StatusCreated, gin.H{"id": newID, "content": input.Content})
+			return
+		}
+		result, err := db.Exec(`UPDATE site_quotes SET content = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`, input.Content, id)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "保存名言失败"})
+			return
+		}
+		n, _ := result.RowsAffected()
+		if n == 0 {
+			c.JSON(http.StatusNotFound, gin.H{"error": "名言不存在"})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"id": id, "content": input.Content})
 	}
 }
 

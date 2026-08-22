@@ -15,7 +15,7 @@ interface ArticlesResponse {
 
 const apiStatus = ref('正在检查...')
 const articles = ref<Article[]>([])
-const homeIntro = ref('只有一种成功，那就是按照自己的意愿过完一生。')
+const homeIntro = ref('正在加载一句话...')
 
 async function fetchHealth() {
   try {
@@ -42,22 +42,25 @@ async function fetchArticles() {
   }
 }
 
-async function fetchSiteSettings() {
+async function fetchQuote() {
   try {
-    const response = await fetch('/api/site-settings')
+    const response = await fetch('/api/site-quotes')
     if (!response.ok) throw new Error(`HTTP ${response.status}`)
-
-    const result: { homeIntro: string } = await response.json()
-    if (result.homeIntro) homeIntro.value = result.homeIntro
+    const result: { quotes: { id: number; content: string }[] } = await response.json()
+    if (result.quotes.length > 0) {
+      homeIntro.value = result.quotes[Math.floor(Math.random() * result.quotes.length)].content
+      return
+    }
   } catch (error) {
-    console.error('Error fetching site settings:', error)
+    console.error('Error fetching quotes:', error)
   }
+  homeIntro.value = '只有一种成功，那就是按照自己的意愿过完一生。'
 }
 
 onMounted(() => {
   fetchHealth()
   fetchArticles()
-  fetchSiteSettings()
+  fetchQuote()
   const preloadArticleView = () => void import('./ArticleView.vue')
   if ('requestIdleCallback' in window) {
     window.requestIdleCallback(preloadArticleView, { timeout: 3000 })
