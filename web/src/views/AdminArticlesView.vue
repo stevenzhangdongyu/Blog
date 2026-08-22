@@ -17,10 +17,6 @@ const router = useRouter()
 const articles = ref<Article[]>([])
 const editing = ref<Article | null>(null)
 const errorMessage = ref('')
-const homeIntro = ref('')
-const settingsMessage = ref('')
-const settingsError = ref('')
-const settingsSaving = ref(false)
 const quotes = ref<Quote[]>([])
 const newQuote = ref('')
 const quoteMessage = ref('')
@@ -34,13 +30,6 @@ async function loadArticles() {
   articles.value = result.articles
 }
 
-async function loadSettings() {
-  const response = await fetch('/api/site-settings')
-  if (!response.ok) return
-  const result: { homeIntro: string } = await response.json()
-  homeIntro.value = result.homeIntro
-}
-
 async function loadQuotes() {
   const response = await fetch('/api/admin/quotes', { credentials: 'include' })
   if (response.status === 401) return router.push('/admin/login')
@@ -52,7 +41,7 @@ async function addQuote() {
   const content = newQuote.value.trim()
   if (!content) return
   const response = await fetch('/api/admin/quotes', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ content }) })
-  if (response.ok) { newQuote.value = ''; quoteMessage.value = '名言已添加'; await loadQuotes() }
+  if (response.ok) { newQuote.value = ''; quoteMessage.value = '名言已添加'; window.dispatchEvent(new Event('comment-celebration')); await loadQuotes() }
 }
 
 async function editQuote(quote: Quote) {
@@ -66,31 +55,6 @@ async function removeQuote(id: number) {
   if (!window.confirm('确定删除这句名言吗？')) return
   const response = await fetch(`/api/admin/quotes/${id}`, { method: 'DELETE', credentials: 'include' })
   if (response.ok) { quoteMessage.value = '名言已删除'; await loadQuotes() }
-}
-
-async function saveSettings() {
-  settingsMessage.value = ''
-  settingsError.value = ''
-  settingsSaving.value = true
-  try {
-    const response = await fetch('/api/admin/settings', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ homeIntro: homeIntro.value }),
-    })
-    const result = await response.json().catch(() => ({}))
-    if (!response.ok) {
-      settingsError.value = result.error || '首页文案保存失败'
-      return
-    }
-    homeIntro.value = result.homeIntro
-    settingsMessage.value = '首页文案已保存'
-  } catch {
-    settingsError.value = '首页文案保存失败，请稍后再试'
-  } finally {
-    settingsSaving.value = false
-  }
 }
 
 function newArticle() {
@@ -152,6 +116,7 @@ async function save() {
     return
   }
   editing.value = null
+  window.dispatchEvent(new Event('comment-celebration'))
   await loadArticles()
 }
 
@@ -168,7 +133,6 @@ async function logout() {
 
 onMounted(() => {
   loadArticles()
-  loadSettings()
   loadQuotes()
 })
 </script>
@@ -180,6 +144,7 @@ onMounted(() => {
       <div class="admin-actions"><button @click="newArticle">新建文章</button><button class="secondary" @click="logout">退出</button></div>
     </header>
     <section v-if="editing" class="editor">
+      <div class="editor-header"><button class="secondary" type="button" @click="editing = null">← 返回控制台</button><span>{{ editing.id ? '编辑文章' : '新建文章' }}</span></div>
       <label>标题 <input v-model="editing.title" @input="updateTitle" /></label>
       <label>Slug <input v-model="editing.slug" placeholder="留空则按标题自动生成" /></label>
       <label>摘要 <textarea v-model="editing.summary" rows="3" /></label>
@@ -208,18 +173,6 @@ onMounted(() => {
       <button class="secondary" @click="editing = null">取消</button>
     </section>
     <template v-else>
-      <section class="site-settings" aria-labelledby="site-settings-title">
-        <div class="site-settings-heading">
-          <div><p class="label">HOME PAGE</p><h2 id="site-settings-title">首页文案</h2></div>
-          <button :disabled="settingsSaving || !homeIntro.trim()" @click="saveSettings">{{ settingsSaving ? '保存中...' : '保存文案' }}</button>
-        </div>
-        <textarea v-model="homeIntro" maxlength="500" rows="3" aria-label="首页文案" placeholder="输入首页展示的文案" />
-        <div class="settings-feedback" aria-live="polite">
-          <p v-if="settingsError" class="form-error">{{ settingsError }}</p>
-          <p v-else-if="settingsMessage" class="form-success">{{ settingsMessage }}</p>
-          <span>{{ homeIntro.length }}/500</span>
-        </div>
-      </section>
       <section class="site-settings" aria-labelledby="quotes-title">
         <div class="site-settings-heading"><div><p class="label">ROTATING QUOTES</p><h2 id="quotes-title">首页名言</h2></div><span>{{ quotes.length }} 条</span></div>
         <div class="quote-editor"><textarea v-model="newQuote" maxlength="500" rows="2" placeholder="添加一句首页名言" /><button :disabled="!newQuote.trim()" @click="addQuote">添加名言</button></div>
@@ -228,8 +181,8 @@ onMounted(() => {
       </section>
       <section class="admin-list">
         <article v-for="article in articles" :key="article.id" class="admin-row">
-          <div><h2>{{ article.title }}</h2><p>{{ article.slug }} · {{ article.status }}</p></div>
-          <div class="admin-actions"><button class="secondary" @click="editing = { ...article }">编辑</button><button class="danger" @click="remove(article.id)">删除</button></div>
+          <div><h2><button class="title-link" type="button" @click="editing = { ...article }">{{ article.title }}</button></h2><p>{{ article.slug }} · {{ article.status }}</p></div>
+          <div class="admin-actions"><button class="danger" @click="remove(article.id)">删除</button></div>
         </article>
         <p v-if="articles.length === 0">还没有文章。</p>
       </section>

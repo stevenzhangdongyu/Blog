@@ -288,6 +288,9 @@ button:disabled { opacity: .6; cursor: wait; }
 .site-settings-heading h2 { margin: 0; font-size: 1.2rem; }
 .site-settings textarea { width: 100%; resize: vertical; border: 1px solid #e2d9d1; background: #fff; padding: 12px; font: inherit; line-height: 1.6; }
 .site-settings textarea:focus { border-color: #c05c83; outline: 3px solid rgba(249, 199, 210, .35); }
+.editor-header { display: flex; align-items: center; gap: 14px; margin-bottom: 18px; color: var(--muted); font-size: .9rem; }
+.title-link { padding: 0; border: 0; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.title-link:hover { color: #71335e; text-decoration: underline; text-underline-offset: 4px; }
 .quote-editor { display: flex; gap: 10px; align-items: flex-end; }
 .quote-editor textarea { flex: 1; }
 .quote-admin-list { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
